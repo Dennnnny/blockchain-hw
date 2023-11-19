@@ -9,9 +9,9 @@ import { TestERC20 } from "../contracts/test/TestERC20.sol";
 
 contract UniswapV2PracticeTest is Test {
     IUniswapV2Router01 public constant UNISWAP_V2_ROUTER =
-    IUniswapV2Router01(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
+        IUniswapV2Router01(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
     IUniswapV2Factory public constant UNISWAP_V2_FACTORY =
-    IUniswapV2Factory(0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f);
+        IUniswapV2Factory(0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f);
     address public constant WETH9 = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
     TestERC20 public testUSDC;
@@ -46,6 +46,18 @@ contract UniswapV2PracticeTest is Test {
     // # Practice 1: maker add liquidity (100 ETH, 10000 USDC)
     function test_maker_addLiquidityETH() public {
         // Implement here
+        vm.startPrank(maker);
+        // approve
+        testUSDC.approve(address(UNISWAP_V2_ROUTER), 10000 * 10 ** testUSDC.decimals());
+        // addliquilityRth
+        UNISWAP_V2_ROUTER.addLiquidityETH{ value: 100 ether }(
+            address(testUSDC),
+            10000 * 10 ** testUSDC.decimals(),
+            0,
+            0,
+            maker,
+            block.timestamp
+        );
 
         // Checking
         IUniswapV2Pair wethUsdcPair = IUniswapV2Pair(UNISWAP_V2_FACTORY.getPair(address(WETH9), address(testUSDC)));
@@ -57,18 +69,67 @@ contract UniswapV2PracticeTest is Test {
     // # Practice 2: taker swap exact 1 ETH for testUSDC
     function test_taker_swapExactETHForTokens() public {
         uint256 takerOriginalUsdcBalance = testUSDC.balanceOf(taker);
+        // saving money here :
+        vm.startPrank(maker);
+        // approve
+        testUSDC.approve(address(UNISWAP_V2_ROUTER), 10000 * 10 ** testUSDC.decimals());
+        // addliquilityRth
+        UNISWAP_V2_ROUTER.addLiquidityETH{ value: 100 ether }(
+            address(testUSDC),
+            10000 * 10 ** testUSDC.decimals(),
+            0,
+            0,
+            maker,
+            block.timestamp
+        );
+
+        vm.stopPrank();
         // Implement here
+        vm.startPrank(taker);
+
+        address[] memory path = new address[](2);
+        path[0] = address(WETH9);
+        path[1] = address(testUSDC);
+
+        UNISWAP_V2_ROUTER.swapExactETHForTokens{ value: 1 ether }(0, path, taker, block.timestamp);
+        vm.stopPrank();
 
         // Checking
         // # Discussion 1: why 98715803 ?
         assertEq(testUSDC.balanceOf(taker) - takerOriginalUsdcBalance, 98715803);
         assertEq(taker.balance, 0);
+
+        // 100 eth , 10000usdc -> (100 + 1*0.997) eth => 100 * 10000 / 101 = 池子剩下的usdc
+        // fee = 0.3% * input token , 實際上只有 inputToken*0.997
     }
 
     // # Practice 3: taker swap exact 100 USDC for ETH
     function test_taker_swapExactTokensForETH() public {
         uint256 takerOriginalETHBalance = taker.balance;
+
+        vm.startPrank(maker);
+        // approve
+        testUSDC.approve(address(UNISWAP_V2_ROUTER), 10000 * 10 ** testUSDC.decimals());
+        // addliquilityEth
+        UNISWAP_V2_ROUTER.addLiquidityETH{ value: 100 ether }(
+            address(testUSDC),
+            10000 * 10 ** testUSDC.decimals(),
+            0,
+            0,
+            maker,
+            block.timestamp
+        );
+
+        vm.stopPrank();
         // Implement here
+        address[] memory path = new address[](2);
+        path[0] = address(testUSDC);
+        path[1] = address(WETH9);
+
+        vm.startPrank(taker);
+        testUSDC.approve(address(UNISWAP_V2_ROUTER), 100 * 10 ** testUSDC.decimals());
+
+        UNISWAP_V2_ROUTER.swapExactTokensForETH(100 * 10 ** testUSDC.decimals(), 0, path, taker, block.timestamp);
 
         // Checking
         // # Discussion 2: why 987158034397061298 ?
@@ -78,8 +139,22 @@ contract UniswapV2PracticeTest is Test {
 
     // # Practice 4: maker remove all liquidity
     function test_maker_removeLiquidityETH() public {
+        vm.startPrank(maker);
+        // approve
+        testUSDC.approve(address(UNISWAP_V2_ROUTER), 10000 * 10 ** testUSDC.decimals());
+        // addliquilityEth
+        (, , uint liquidity) = UNISWAP_V2_ROUTER.addLiquidityETH{ value: 100 ether }(
+            address(testUSDC),
+            10000 * 10 ** testUSDC.decimals(),
+            0,
+            0,
+            maker,
+            block.timestamp
+        );
         // Implement here
-
+        WETHTestUSDCPair.approve(address(UNISWAP_V2_ROUTER), liquidity);
+        UNISWAP_V2_ROUTER.removeLiquidityETH(address(testUSDC), liquidity, 0, 0, maker, block.timestamp);
+        vm.stopPrank();
         // Checking
         IUniswapV2Pair wethUsdcPair = IUniswapV2Pair(UNISWAP_V2_FACTORY.getPair(address(WETH9), address(testUSDC)));
         (uint112 reserve0, uint112 reserve1, ) = wethUsdcPair.getReserves();
