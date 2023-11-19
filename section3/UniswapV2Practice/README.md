@@ -12,7 +12,7 @@ Reference:
 Clone this repository, install Node.js dependencies, and build the source code:
 
 ```bash
-git clone git@github.com:AppWorks-School/Blockchain-Resource.git
+git clone git@github.com:Dennnnny/blockchain-hw.git
 cd Blockchain-Resource/section3/UniswapV2Practice
 forge install
 forge build
