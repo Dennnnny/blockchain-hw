@@ -96,7 +96,7 @@ contract SimpleSwap is ISimpleSwap, ERC20 {
         //     ERC20(address(token1)).balanceOf(address(this))
         // );
 
-        this.transferFrom(msg.sender, address(this), liquidity);
+        _transfer(msg.sender, address(this), liquidity);
         _burn(address(this), liquidity);
     }
 
